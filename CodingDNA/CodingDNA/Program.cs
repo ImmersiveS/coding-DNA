@@ -20,7 +20,7 @@ namespace CodingDNA
         static void Main(string[] args)
         {
             char[] states = { H, L };
-            char[] observations = { A, C, G, T };
+            string observations = "GGCA";
 
             var startProbability = new Dictionary<char, float>();
             startProbability.Add(H, 0.5f);
@@ -51,14 +51,85 @@ namespace CodingDNA
             LE.Add(T, 0.3f);
             emissionProbability.Add(H, HE);
             emissionProbability.Add(L, LE);
+
+            var result = ForwardViterbi(observations.ToCharArray(), states, startProbability, transitionProbability, emissionProbability);
+            Console.WriteLine((float)result[0]);
+            Console.WriteLine(observations);
+            Console.WriteLine((String)result[1]);
+            Console.WriteLine((float)result[2]);
+
         }
 
-        public static Object[] ForwardViterbi(string obs, char[] states, 
-                                              Dictionary<char[], float> start_p, 
-                                              Dictionary<char[], Dictionary<char[], float>> trans_p,
-                                              Dictionary<char[], Dictionary<char[], float>> emit_p)
+        public static Object[] ForwardViterbi(char[] obs, char[] states, 
+                                              Dictionary<char, float> start_p, 
+                                              Dictionary<char, Dictionary<char, float>> trans_p,
+                                              Dictionary<char, Dictionary<char, float>> emit_p)
         {
-            return null;
+            var statesData = new Dictionary<char, Object[]>();
+            foreach (var state in states)
+            {
+                statesData.Add(state, new Object[] { start_p[state], state.ToString(), start_p[state] });
+            }
+
+            foreach (var acid in obs)
+            {
+                var tempData = new Dictionary<char, Object[]>();
+                foreach (var nextState in states)
+                {
+                    float total = 0;
+                    String argmax = "";
+                    float valmax = 0;
+
+                    float prob = 1;
+                    String vPath = "";
+                    float vProb = 1;
+
+                    foreach (var sourceState in states)
+                    {
+                        Object[] objs = statesData[sourceState];
+                        prob = ((float)objs[0]);
+                        vPath = (String)objs[1];
+                        vProb = ((float)objs[2]);
+
+                        float p = emit_p[sourceState][acid] * trans_p[sourceState][nextState];
+                        prob *= p;
+                        vProb *= p;
+                        total += prob;
+
+                        if (vProb > valmax)
+                        {
+                            valmax = vProb;
+                            argmax = vPath + nextState;
+                        }
+                    }
+
+                    tempData.Add(nextState, new Object[] { total, argmax, valmax });
+                }
+                statesData = tempData;
+            }
+
+            float xtotal = 0;
+            String xargmax = "";
+            float xvalmax = 0;
+
+            float xprob;
+            String xvPath;
+            float xvProb;
+            foreach (var state in states)
+            {
+                Object[] objs = statesData[state];
+                xprob = ((float)objs[0]);
+                xvPath = ((String)objs[1]);
+                xvProb = ((float)objs[2]);
+
+                xtotal += xprob;
+                if (xvProb > xvalmax)
+                {
+                    xargmax = xvPath;
+                    xvalmax = xvProb;
+                }
+            }
+            return new Object[]{ xtotal, xargmax.Substring(0, xargmax.Length - 1), xvalmax };
         }
     }
 }
